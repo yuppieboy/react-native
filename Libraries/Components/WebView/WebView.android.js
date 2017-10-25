@@ -45,6 +45,14 @@ var defaultRenderLoading = () => (
  * Renders a native WebView.
  */
 class WebView extends React.Component {
+	  static get extraNativeComponentConfig() {
+     return {
+       nativeOnly: {
+         messagingEnabled: PropTypes.bool,
+       },
+     };
+   }
+
   static propTypes = {
     ...ViewPropTypes,
     renderError: PropTypes.func,
@@ -195,6 +203,26 @@ class WebView extends React.Component {
      * @platform android
      */
     saveFormDataDisabled: PropTypes.bool,
+    
+         /* Override the native component used to render the WebView. Enables a custom native
+      * WebView which uses the same JavaScript as the original WebView.
+      */
+     nativeConfig: PropTypes.shape({
+       /*
+        * The native component used to render the WebView.
+        */
+       component: PropTypes.any,
+       /*
+        * Set props directly on the native component WebView. Enables custom props which the
+      * original WebView doesn't pass through.
+        */
+       props: PropTypes.object,
+       /*
+        * Set the ViewManager to use for communcation with the native side.
+        * @platform ios
+        */
+       viewManager: PropTypes.object,
+     }),
   };
 
   static defaultProps = {
@@ -250,9 +278,13 @@ class WebView extends React.Component {
     } else if (source.method === 'GET' && source.body) {
       console.warn('WebView: `source.body` is not supported when using GET.');
     }
+    
+     const nativeConfig = this.props.nativeConfig || {};
+ 
+     let NativeWebView = nativeConfig.component || RCTWebView;
 
     var webView =
-      <RCTWebView
+      <NativeWebView
         ref={RCT_WEBVIEW_REF}
         key="webViewKey"
         style={webViewStyles}
@@ -276,6 +308,7 @@ class WebView extends React.Component {
         allowUniversalAccessFromFileURLs={this.props.allowUniversalAccessFromFileURLs}
         mixedContentMode={this.props.mixedContentMode}
         saveFormDataDisabled={this.props.saveFormDataDisabled}
+        {...nativeConfig.props}
       />;
 
     return (
@@ -389,11 +422,7 @@ class WebView extends React.Component {
   }
 }
 
-var RCTWebView = requireNativeComponent('RCTWebView', WebView, {
-  nativeOnly: {
-    messagingEnabled: PropTypes.bool,
-  },
-});
+var RCTWebView = requireNativeComponent('RCTWebView', WebView, WebView.extraNativeComponentConfig);
 
 var styles = StyleSheet.create({
   container: {
